@@ -138,6 +138,7 @@ celerybeat.pid
 .env
 .envrc
 .venv
+.env.local
 env/
 venv/
 ENV/
@@ -205,3 +206,18 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+### NuxtJS ###
+# Generated dirs
+dist
+.nuxt
+.nuxt-*
+.output
+.gen
+
+# Node dependencies
+node_modules
+
+# Other
+.DS_Store
