@@ -7,6 +7,7 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxt/icon',
     '@vueuse/nuxt',
+    '@samk-dev/nuxt-vcalendar',
   ],
   css: [
     // 必要に応じてグローバルSCSSファイルを追加

@@ -22,6 +22,7 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@nuxt/icon": "^1.14.0"
+    "@nuxt/icon": "^1.14.0",
+    "@samk-dev/nuxt-vcalendar": "^1.0.4"
   }
 }
