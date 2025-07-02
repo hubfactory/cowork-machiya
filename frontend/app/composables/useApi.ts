@@ -1,10 +1,10 @@
 import { ref } from 'vue';
 
-export function useApi() {
+export const useApi = () => {
   const loading = ref(false);
   const error = ref<null | string>(null);
 
-  async function get<T>(url: string, params?: Record<string, any>): Promise<T | null> {
+  const get = async <T>(url: string, params?: Record<string, any>): Promise<T | null> => {
     loading.value = true;
     error.value = null;
     try {
@@ -18,9 +18,9 @@ export function useApi() {
     } finally {
       loading.value = false;
     }
-  }
+  };
 
-  async function post<T>(url: string, body: any): Promise<T | null> {
+  const post = async <T>(url: string, body: any): Promise<T | null> => {
     loading.value = true;
     error.value = null;
     try {
@@ -37,9 +37,9 @@ export function useApi() {
     } finally {
       loading.value = false;
     }
-  }
+  };
 
-  async function del<T>(url: string): Promise<T | null> {
+  const del = async <T>(url: string): Promise<T | null> => {
     loading.value = true;
     error.value = null;
     try {
@@ -52,7 +52,7 @@ export function useApi() {
     } finally {
       loading.value = false;
     }
-  }
+  };
 
   return { get, post, del, loading, error };
-} 
+}; 

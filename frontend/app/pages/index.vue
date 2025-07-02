@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 
 const heroImage = '/hero.jpg';
+const firstDayOfWeek: any = 0;
 const selectedDate = ref<string>('');
 const seatInfo = ref<Record<string, number>>({
   '2024-07-01': 5,
@@ -28,8 +29,8 @@ const calendarAttrs = computed(() => {
     if (holidayInfo.value.includes(date)) {
       attrs.push({
         key: `holiday-${date}`,
-        dates: date,
-        highlight: { color: '#a94442', fillMode: 'solid' },
+        dates: [new Date(date)],
+        highlight: { color: '#a94442', fillMode: 'solid' as const },
         customData: { type: 'holiday' },
         popover: { label: '休日' }
       });
@@ -37,8 +38,8 @@ const calendarAttrs = computed(() => {
       const seats = seatInfo.value[date];
       attrs.push({
         key: `seat-${date}`,
-        dates: date,
-        highlight: { color: seats === 0 ? '#a94442' : '#bfa77a', fillMode: 'outline' },
+        dates: [new Date(date)],
+        highlight: { color: seats === 0 ? '#a94442' : '#bfa77a', fillMode: 'outline' as const },
         customData: { type: seats === 0 ? 'full' : 'seat', seats },
         popover: { label: seats === 0 ? '満席' : `残${seats}` }
       });
@@ -47,11 +48,11 @@ const calendarAttrs = computed(() => {
   return attrs;
 });
 
-function onDaySelect(date: Date) {
+const onDaySelect = (date: Date) => {
   const d = format(date, 'yyyy-MM-dd');
   selectedDate.value = d;
   form.value.date = d;
-}
+};
 
 const form = ref({
   name: '',
@@ -70,7 +71,7 @@ const schema = z.object({
   seats: z.number().min(1, '1席以上選択してください'),
 });
 
-async function submitReservation() {
+const submitReservation = async () => {
   formError.value = '';
   const parsed = schema.safeParse(form.value);
   if (!parsed.success) {
@@ -79,20 +80,22 @@ async function submitReservation() {
   }
   alert('予約しました（ダミー）');
   form.value = { name: '', email: '', date: '', seats: 1 };
-}
+};
 
-async function fetchReservations() {
+const fetchReservations = async () => {
   if (!userEmail.value) return;
   reservations.value = [
     { id: '1', name: '山田太郎', email: userEmail.value, date: '2024-07-01', seats: 2 },
     { id: '2', name: '佐藤花子', email: userEmail.value, date: '2024-07-03', seats: 1 },
   ];
-}
+};
 
-async function cancelReservation(id: string) {
+const cancelReservation = async (id: string) => {
   alert('キャンセルしました（ダミー）');
   reservations.value = reservations.value.filter(r => r.id !== id);
-}
+};
+
+const { get, post, del, loading, error } = useApi();
 </script>
 
 <template>
@@ -111,37 +114,48 @@ async function cancelReservation(id: string) {
       <div class="calendar-card">
         <h2 class="section-title">予約カレンダー</h2>
         <client-only>
+          <!-- @ts-expect-error -->
           <VCalendar
             expanded
             :attributes="calendarAttrs"
-            @dayclick="onDaySelect"
             class="vcalendar-google"
             :title-position="'center'"
-            :first-day-of-week="0"
+            :first-day-of-week="firstDayOfWeek"
             :show-arrows="true"
             :show-weeknumbers="false"
             :min-page="{ month: 7, year: 2024 }"
             :max-page="{ month: 7, year: 2024 }"
           >
             <template #day-content="{ day, attributes }">
-              <div class="vc-day-label">{{ day.day }}</div>
-              <div v-if="attributes.length">
+              <div
+                class="vc-day-content-custom"
+                :class="{ 'selected-day-bg': selectedDate === format(day.date, 'yyyy-MM-dd') }"
+                @click="onDaySelect(day.date)"
+                style="cursor: pointer;"
+              >
                 <span
-                  v-for="attr in attributes.filter((a: any) => a.customData)"
-                  :key="attr.key"
-                  :class="[
-                    'calendar-badge',
-                    attr.customData.type === 'full' ? 'full' :
-                    attr.customData.type === 'seat' ? 'seat' : 'holiday'
-                  ]"
-                >
-                  {{ attr.customData.type === 'full'
-                    ? '満'
-                    : attr.customData.type === 'seat'
-                      ? `残${attr.customData.seats}`
-                      : '休'
-                  }}
-                </span>
+                  v-if="day.isToday || day.isSelected"
+                  class="vc-day-highlight-custom"
+                ></span>
+                <span class="vc-day-label-custom">{{ day.day }}</span>
+                <div v-if="attributes.length">
+                  <span
+                    v-for="attr in attributes.filter((a: any) => a.customData)"
+                    :key="attr.key"
+                    :class="[
+                      'calendar-badge',
+                      attr.customData.type === 'full' ? 'full' :
+                      attr.customData.type === 'seat' ? 'seat' : 'holiday'
+                    ]"
+                  >
+                    {{ attr.customData.type === 'full'
+                      ? '満'
+                      : attr.customData.type === 'seat'
+                        ? `残${attr.customData.seats}`
+                        : '休'
+                    }}
+                  </span>
+                </div>
               </div>
             </template>
           </VCalendar>
@@ -158,6 +172,9 @@ async function cancelReservation(id: string) {
     <section class="reservation-form">
       <div class="form-card">
         <h2 class="section-title">予約フォーム</h2>
+        <div class="selected-date">
+          選択日: <span class="selected-badge">{{ selectedDate || '-' }}</span>
+        </div>
         <form @submit.prevent="submitReservation" class="form-grid">
           <div class="form-group">
             <label for="name">名前</label>
@@ -166,10 +183,6 @@ async function cancelReservation(id: string) {
           <div class="form-group">
             <label for="email">メールアドレス</label>
             <input id="email" v-model="form.email" type="email" required class="modern-input" placeholder="例: sample@example.com" />
-          </div>
-          <div class="form-group">
-            <label for="date">日付</label>
-            <input id="date" v-model="form.date" type="date" required class="modern-input" />
           </div>
           <div class="form-group">
             <label for="seats">席数</label>
@@ -208,84 +221,47 @@ async function cancelReservation(id: string) {
 
 <style lang="scss" scoped>
 @use 'sass:color';
-$main-bg: #23211c;
-$main-fg: #f5f3ee;
-$accent: #bfa77a;
-$card-bg: #2d2923;
-$card-border: #3a362f;
-$modern-shadow: 0 4px 24px rgba(0,0,0,0.12);
+$main-bg: #fff;
+$main-fg: #222;
+$accent: #2c3e50;
+$card-bg: #fff;
+$card-border: #e0e0e0;
+$modern-shadow: 0 4px 24px rgba(0,0,0,0.08);
 $radius: 18px;
+$badge-full: #b04a4a;
+$badge-seat: #374151;
+$badge-text: #fff;
 
-.vcalendar-google {
-  :deep(.vc-pane-container) {
-    background: $card-bg;
-    border-radius: $radius;
-    color: $main-fg;
-    font-size: 1.1rem;
-    box-shadow: $modern-shadow;
-    padding: 0.5rem 0.5rem 1.5rem 0.5rem;
-  }
-  :deep(.vc-title) {
-    color: $accent;
-    font-size: 1.3rem;
-    font-weight: bold;
-    letter-spacing: 0.05em;
-  }
-  :deep(.vc-day-content) {
-    min-width: 48px;
-    min-height: 56px;
-    border-radius: 10px;
-    background: $main-bg;
-    transition: background 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    font-size: 1.1rem;
-    .vc-day-label {
-      font-weight: bold;
-      font-size: 1.1em;
-      margin-bottom: 0.2em;
-    }
-  }
-  :deep(.vc-highlight) {
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 1em;
-    padding: 0.1em 0.7em;
-    margin-top: 0.2em;
-    border: none;
-    box-shadow: none;
-  }
-}
 .centered-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 540px;
-  margin: 0 auto;
-  padding: 2rem 1rem 3rem 1rem;
   background: $main-bg;
   color: $main-fg;
   min-height: 100vh;
 }
 .hero {
-  width: 100%;
+  width: 100vw;
   margin-bottom: 2rem;
   .hero-card {
+    width: 100vw;
     background: $card-bg;
-    border-radius: $radius;
-    box-shadow: $modern-shadow;
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
     text-align: center;
     padding-bottom: 1rem;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
   }
   .hero-image {
-    width: 100%;
-    max-height: 220px;
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 320px;
     object-fit: cover;
-    border-radius: $radius $radius 0 0;
+    border-radius: 0;
     margin-bottom: 0.5rem;
+    display: block;
   }
   .hero-desc {
     font-size: 1.1rem;
@@ -306,62 +282,114 @@ $radius: 18px;
   color: $accent;
   letter-spacing: 0.05em;
 }
-.calendar {
+.calendar, .reservation-form, .reservation-list {
   width: 100%;
-  margin-bottom: 2rem;
-  .calendar-card {
+  max-width: 800px;
+  margin: 0 auto 2rem auto;
+}
+.calendar-card, .form-card, .list-card {
+  background: $card-bg;
+  border-radius: $radius;
+  box-shadow: $modern-shadow;
+  padding: 1.2rem 1rem 1.5rem 1rem;
+  border: 1px solid $card-border;
+}
+.vcalendar-google {
+  :deep(.vc-pane-container) {
     background: $card-bg;
     border-radius: $radius;
+    color: $main-fg;
+    font-size: 1.1rem;
     box-shadow: $modern-shadow;
-    padding: 1.2rem 1rem 1.5rem 1rem;
-    border: 1px solid $card-border;
+    padding: 0.5rem 0.5rem 1.5rem 0.5rem;
   }
-  .selected-date {
-    margin-bottom: 0.5rem;
-    .selected-badge {
-      background: $accent;
-      color: #fff;
-      border-radius: 12px;
-      padding: 0.2em 0.8em;
-      font-size: 1rem;
-      margin-left: 0.5em;
-    }
+  :deep(.vc-title) {
+    color: $accent;
+    font-size: 1.3rem;
+    font-weight: bold;
+    letter-spacing: 0.05em;
   }
-  .calendar-legend {
+  :deep(.vc-day-content-custom) {
+    position: relative;
+    width: 100%;
+    height: 100%;
     display: flex;
-    gap: 1.5rem;
-    font-size: 0.95rem;
-    margin-top: 0.5rem;
-    .legend {
-      display: inline-block;
-      padding: 0.1em 0.7em;
-      border-radius: 8px;
-      font-weight: bold;
-    }
-    .holiday-badge {
-      background: #a94442;
-      color: #fff;
-    }
-    .seat-badge {
-      background: $accent;
-      color: #fff;
-    }
-    .full-badge {
-      background: #a94442;
-      color: #fff;
-    }
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  :deep(.vc-day-highlight-custom) {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2em;
+    height: 2em;
+    background: #1976d2;
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  :deep(.vc-day-label-custom) {
+    position: relative;
+    z-index: 1;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 0.2em;
+    color: #fff;
+    line-height: 2em;
+    display: inline-block;
+    text-align: center;
+    width: 2em;
+    height: 2em;
+  }
+  :deep(.selected-day-bg) {
+    background: #ffe4ec !important;
+    border-radius: 10px;
+    transition: background 0.2s;
   }
 }
-.reservation-form {
-  width: 100%;
-  margin-bottom: 2rem;
-  .form-card {
-    background: $card-bg;
-    border-radius: $radius;
-    box-shadow: $modern-shadow;
-    padding: 1.5rem 1.2rem 1.5rem 1.2rem;
-    border: 1px solid $card-border;
+.calendar-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0.15em 1.1em;
+  border-radius: 8px;
+  font-size: 1.05em;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  &.full, &.holiday { background: $badge-full; color: $badge-text; }
+  &.seat { background: $badge-seat; color: $badge-text; }
+}
+.selected-date {
+  margin-bottom: 0.5rem;
+  .selected-badge {
+    background: $accent;
+    color: #fff;
+    border-radius: 12px;
+    padding: 0.2em 0.8em;
+    font-size: 1rem;
+    margin-left: 0.5em;
   }
+}
+.calendar-legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  .legend {
+    display: inline-block;
+    padding: 0.1em 1.1em;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1em;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+  }
+  .holiday-badge, .full-badge { background: $badge-full; color: $badge-text; }
+  .seat-badge { background: $badge-seat; color: $badge-text; }
+}
+.reservation-form {
   .form-grid {
     display: flex;
     flex-direction: column;
@@ -384,7 +412,7 @@ $radius: 18px;
     border-radius: 10px;
     border: 1px solid $card-border;
     font-size: 1.1rem;
-    background: #23211c;
+    background: #fff;
     color: $main-fg;
     outline: none;
     transition: border 0.2s;
@@ -422,25 +450,55 @@ $radius: 18px;
   }
 }
 .reservation-list {
-  width: 100%;
-  margin-bottom: 2rem;
-  .list-card {
-    background: $card-bg;
-    border-radius: $radius;
-    box-shadow: $modern-shadow;
-    padding: 1.5rem 1.2rem 1.5rem 1.2rem;
-    border: 1px solid $card-border;
-  }
   .search-form {
     display: flex;
+    flex-direction: row;
     gap: 1rem;
     margin-bottom: 1rem;
     max-width: 400px;
     margin-left: auto;
     margin-right: auto;
+    background: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
   }
   .search-input {
     flex: 1;
+    background: #fff;
+    color: $main-fg;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    padding: 0.8em 1em;
+    border: 1px solid $card-border;
+    outline: none;
+    transition: border 0.2s;
+    &:focus {
+      border: 1.5px solid $accent;
+    }
+  }
+  .modern-btn {
+    background: $accent;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.9em 0;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: background 0.2s;
+    width: auto;
+    min-width: 100px;
+    &:hover {
+      background: color.adjust($accent, $lightness: -10%);
+    }
+    &:disabled {
+      background: #ccc;
+      color: #888;
+      cursor: not-allowed;
+    }
   }
   .reservation-ul {
     margin: 0;
@@ -480,16 +538,5 @@ $radius: 18px;
     color: #888;
     padding: 1rem 0;
   }
-}
-.calendar-badge {
-  display: inline-block;
-  margin-top: 2px;
-  padding: 0.1em 0.7em;
-  border-radius: 8px;
-  font-size: 0.95em;
-  font-weight: bold;
-  &.full { background: #a94442; color: #fff; }
-  &.seat { background: $accent; color: #fff; }
-  &.holiday { background: #a94442; color: #fff; }
 }
 </style>
