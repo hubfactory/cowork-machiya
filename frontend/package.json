@@ -1,0 +1,28 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^3.2.0",
+    "@vueuse/core": "^13.4.0",
+    "@vueuse/nuxt": "^13.4.0",
+    "date-fns": "^4.1.0",
+    "nuxt": "^3.17.5",
+    "sass": "^1.89.2",
+    "v-calendar": "^3.1.2",
+    "vue": "^3.5.17",
+    "vue-router": "^4.5.1",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@nuxt/icon": "^1.14.0",
+    "@samk-dev/nuxt-vcalendar": "^1.0.4"
+  }
+}
