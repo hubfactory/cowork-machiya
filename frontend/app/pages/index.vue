@@ -4,6 +4,7 @@ import { useApi } from '@/composables/useApi';
 import type { Reservation, ReservationResponse } from '@/types/reservation';
 import { z } from 'zod';
 import { format } from 'date-fns';
+import Calendar from '@/components/Calendar.vue';
 
 const heroImage = '/hero.jpg';
 const firstDayOfWeek: any = 0;
@@ -111,62 +112,14 @@ const { get, post, del, loading, error } = useApi();
     </section>
 
     <section class="calendar">
-      <div class="calendar-card">
-        <h2 class="section-title">予約カレンダー</h2>
-        <client-only>
-          <!-- @ts-expect-error -->
-          <VCalendar
-            expanded
-            :attributes="calendarAttrs"
-            class="vcalendar-google"
-            :title-position="'center'"
-            :first-day-of-week="firstDayOfWeek"
-            :show-arrows="true"
-            :show-weeknumbers="false"
-            :min-page="{ month: 7, year: 2024 }"
-            :max-page="{ month: 7, year: 2024 }"
-          >
-            <template #day-content="{ day, attributes }">
-              <div
-                class="vc-day-content-custom"
-                :class="{ 'selected-day-bg': selectedDate === format(day.date, 'yyyy-MM-dd') }"
-                @click="onDaySelect(day.date)"
-                style="cursor: pointer;"
-              >
-                <span
-                  v-if="day.isToday || day.isSelected"
-                  class="vc-day-highlight-custom"
-                ></span>
-                <span class="vc-day-label-custom">{{ day.day }}</span>
-                <div v-if="attributes.length">
-                  <span
-                    v-for="attr in attributes.filter((a: any) => a.customData)"
-                    :key="attr.key"
-                    :class="[
-                      'calendar-badge',
-                      attr.customData.type === 'full' ? 'full' :
-                      attr.customData.type === 'seat' ? 'seat' : 'holiday'
-                    ]"
-                  >
-                    {{ attr.customData.type === 'full'
-                      ? '満'
-                      : attr.customData.type === 'seat'
-                        ? `残${attr.customData.seats}`
-                        : '休'
-                    }}
-                  </span>
-                </div>
-              </div>
-            </template>
-          </VCalendar>
-        </client-only>
-        <div v-if="selectedDate" class="selected-date">選択日: <span class="selected-badge">{{ selectedDate }}</span></div>
-        <div class="calendar-legend">
-          <span class="legend holiday-badge">休: 休日</span>
-          <span class="legend seat-badge">残: 残席数</span>
-          <span class="legend full-badge">満席</span>
-        </div>
-      </div>
+      <Calendar
+        :seat-info="seatInfo"
+        :holiday-info="holidayInfo"
+        v-model="selectedDate"
+        :min-page="{ month: 7, year: 2024 }"
+        :max-page="{ month: 7, year: 2024 }"
+        :first-day-of-week="0"
+      />
     </section>
 
     <section class="reservation-form">
