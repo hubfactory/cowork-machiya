@@ -1,0 +1,32 @@
+version: "3.8"
+services:
+  frontend:
+    build: ./frontend
+    container_name: cowork-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - HOST=0.0.0.0
+    command: "npm run dev"
+
+  backend:
+    build: ./backend
+    container_name: cowork-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - dynamodb-local
+
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    ports:
+      - "8001:8000"
+    command: -jar DynamoDBLocal.jar -inMemory -sharedDb
